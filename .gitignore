@@ -1,0 +1,10 @@
+# Campaign data is per-user, not part of the plugin
+game/
+
+# OS
+.DS_Store
+
+# Editor
+.vscode/
+.idea/
+*.sw?

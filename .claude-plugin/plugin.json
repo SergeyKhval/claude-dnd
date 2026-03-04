@@ -1,0 +1,8 @@
+{
+  "name": "claude-dnd",
+  "description": "D&D 5e game engine for Claude Code. Play solo tabletop RPG campaigns with persistent file-based game state, transparent dice rolling, and full 5e rules.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sergey Khval"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "claude-dnd-marketplace",
+  "description": "D&D 5e game engine for Claude Code",
+  "owner": {
+    "name": "Sergey Khval"
+  },
+  "plugins": [
+    {
+      "name": "claude-dnd",
+      "description": "D&D 5e game engine — solo tabletop RPG campaigns with persistent file-based game state, transparent dice rolling, and full 5e rules",
+      "version": "0.1.0",
+      "source": {
+        "source": "url",
+        "url": "https://github.com/SergeyKhval/claude-dnd.git"
+      }
+    }
+  ]
+}
