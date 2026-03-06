@@ -70,10 +70,12 @@ The world moves and surprises. Random tables in [random-tables.md](random-tables
 ### How to Roll
 1. Roll d20
 2. On **1-10:** Nothing notable — describe the atmosphere, move on
-3. On **11-20:** Use the corresponding entry from the relevant table (Town, Road, Wilderness, Dungeon)
-4. **Check active quest secrets** — if the random event can plausibly connect to a quest's evidence trail, use it to surface a clue or reinforce the quest's truth. Aim for ~1 in 3 random events to tie back to an active quest.
-5. Expand the seed narratively — tie it to active quests, clocks, or factions when possible
-6. Not every random event needs to be combat — most are flavor, information, or choice
+3. On **11-20:** Use the corresponding entry from the relevant table (Town, Road, Wilderness, Dungeon). **Do not show the raw table entry to the player** — it is DM-facing only.
+4. **Narrate the scene first**, then prompt for any required rolls. Describe what happens in the fiction — the player should feel the danger before seeing the dice. Apply the table entry's full mechanical effect (saves, combat, skill checks, hazards). Do not skip mechanics for flavor-only narration.
+5. **Quest-like encounter?** If the encounter has mystery, ongoing threat, or investigation potential that won't resolve in this scene, **pause narration and create a quest** following the quest-design protocol in `${CLAUDE_SKILL_DIR}/quest-design.md` (Minor difficulty fits most random encounters). Define the truth and write all quest files before the player interacts with it. Then narrate the hook.
+6. **Check active quest secrets** — if the random event can plausibly connect to a quest's evidence trail, use it to surface a clue or reinforce the quest's truth. Aim for ~1 in 3 random events to tie back to an active quest.
+7. Expand the seed narratively — tie it to active quests, clocks, or factions when possible
+8. Not every random event needs to be combat — most are flavor, information, or choice
 
 ---
 

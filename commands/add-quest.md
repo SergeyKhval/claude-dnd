@@ -15,7 +15,7 @@ Add {{ count | default: 1 }} new quest(s) to the campaign.
 2. **Read the quest design protocol:** `${CLAUDE_PLUGIN_ROOT}/skills/dm/quest-design.md` — follow it exactly.
 
 3. **For each quest to create:**
-   a. Collaborate with the player on what kind of quest they want (or propose options that fit the current narrative). Ask about preferred difficulty (Minor / Standard / Major / Arc).
+   a. **Determine quest parameters autonomously.** Choose a difficulty (Minor / Standard / Major / Arc) and theme that fits the current narrative, open threads, and world state. Do not ask the player — design the quest silently, as a DM would prep behind the screen.
    b. **Define the Truth first** — the actual resolution, before writing anything else.
    c. Build the evidence trail, seed NPC knowledge, and seed location clues per the protocol.
    d. Use the **Minor (prose) template** for Minor quests, **structured template** for Standard+.

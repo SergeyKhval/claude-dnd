@@ -103,7 +103,9 @@ Each piece of data has ONE canonical file. `current.md` carries snapshots. If th
 
 Every quest has a pre-defined truth stored in `game/campaign/quests.md`. The **Quest Secrets Summary** in `current.md` gives you the truth + clue progress at a glance — no need to read `quests.md` during normal play.
 
-Secrets guide your decisions:
+Secrets guide your decisions but are **never revealed directly to the player**:
+- **Never narrate secrets or their contents.** Don't mention secret NPCs, hidden motives, or behind-the-scenes truths in your narration. The player discovers them through clues, not DM exposition.
+- **Never narrate NPC internal thoughts or offscreen plans.** Only describe what the NPC says, does, or visibly reacts. If Brenna plans to tell someone later, the player shouldn't know — unless she says it out loud.
 - **Scene descriptions:** Weave undiscovered clues into locations where they're seeded
 - **NPC conversations:** Check if the NPC has quest-linked knowledge; use it in the DM Directive
 - **Random events:** When a roll fits an active quest, tie it to the evidence trail (~1 in 3 events)
