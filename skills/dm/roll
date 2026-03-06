@@ -1,0 +1,142 @@
+#!/usr/bin/env python3
+"""D&D dice roller. Rolls multiple dice expressions in one call.
+
+Usage:
+  ./roll d20
+  ./roll d20+5 vs 16
+  ./roll adv d20+5 vs 16
+  ./roll dis d20+3
+  ./roll 2d6+4
+  ./roll init d20+2 d20+1 d20+0
+  ./roll d20+5 vs 16, 2d8+3
+  ./roll 4d6k3                    (roll 4d6, keep highest 3)
+
+Multiple rolls: separate with spaces (or commas for roll+damage pairs).
+Advantage: prefix with 'adv'
+Disadvantage: prefix with 'dis'
+"""
+
+import random
+import re
+import sys
+
+def roll_dice(count, sides):
+    return [random.randint(1, sides) for _ in range(count)]
+
+def parse_and_roll(expr):
+    expr = expr.strip()
+
+    # Check for advantage/disadvantage
+    mode = "normal"
+    if expr.startswith("adv "):
+        mode = "advantage"
+        expr = expr[4:].strip()
+    elif expr.startswith("dis "):
+        mode = "disadvantage"
+        expr = expr[4:].strip()
+
+    # Split on 'vs' for target number
+    target = None
+    if " vs " in expr:
+        expr, target_str = expr.split(" vs ", 1)
+        expr = expr.strip()
+        target = int(target_str.strip())
+
+    # Parse dice expression: NdS+M or NdSkK
+    match = re.match(r'^(\d*)d(\d+)(?:k(\d+))?([+-]\d+)?$', expr)
+    if not match:
+        return f"? Invalid: {expr}"
+
+    count = int(match.group(1)) if match.group(1) else 1
+    sides = int(match.group(2))
+    keep = int(match.group(3)) if match.group(3) else None
+    mod = int(match.group(4)) if match.group(4) else 0
+
+    if mode in ("advantage", "disadvantage") and count == 1 and sides == 20 and keep is None:
+        # Roll 2d20
+        r1, r2 = random.randint(1, sides), random.randint(1, sides)
+        chosen = max(r1, r2) if mode == "advantage" else min(r1, r2)
+        total = chosen + mod
+        mod_str = f" + {mod}" if mod > 0 else (f" - {abs(mod)}" if mod < 0 else "")
+        label = "Advantage" if mode == "advantage" else "Disadvantage"
+        result = f"d20({r1}, {r2}){mod_str} = {total} [{label}, took {chosen}]"
+        if target is not None:
+            hit = "Success" if total >= target else "Failure"
+            nat = " (NAT 20!)" if chosen == 20 else (" (NAT 1!)" if chosen == 1 else "")
+            result += f" vs DC/AC {target} -> {hit}{nat}"
+        return result
+
+    rolls = roll_dice(count, sides)
+
+    if keep is not None:
+        sorted_rolls = sorted(rolls, reverse=True)
+        kept = sorted_rolls[:keep]
+        dropped = sorted_rolls[keep:]
+        rolls_str = ", ".join(str(r) for r in kept)
+        if dropped:
+            rolls_str += " ~" + ", ".join(str(r) for r in dropped) + "~"
+        subtotal = sum(kept)
+    else:
+        rolls_str = ", ".join(str(r) for r in rolls)
+        subtotal = sum(rolls)
+
+    total = subtotal + mod
+
+    dice_label = f"{count}d{sides}" if count > 1 else f"d{sides}"
+    if keep is not None:
+        dice_label += f"k{keep}"
+    mod_str = f" + {mod}" if mod > 0 else (f" - {abs(mod)}" if mod < 0 else "")
+
+    result = f"{dice_label}({rolls_str}){mod_str} = {total}"
+
+    if target is not None:
+        hit = "Success" if total >= target else "Failure"
+        nat = ""
+        if count == 1 and sides == 20:
+            nat = " (NAT 20!)" if rolls[0] == 20 else (" (NAT 1!)" if rolls[0] == 1 else "")
+        result += f" vs DC/AC {target} -> {hit}{nat}"
+
+    return result
+
+def main():
+    if len(sys.argv) < 2:
+        print(__doc__)
+        sys.exit(0)
+
+    # Join args and split on commas for grouping
+    full = " ".join(sys.argv[1:])
+    groups = [g.strip() for g in full.split(",")]
+
+    for group in groups:
+        # Handle 'init' prefix: label each roll
+        if group.startswith("init "):
+            parts = group[5:].strip().split()
+            for i, part in enumerate(parts):
+                print(f"  [{i+1}] {parse_and_roll(part)}")
+            continue
+
+        # Check if group has advantage/disadvantage prefix
+        prefix = ""
+        rest = group
+        if group.startswith("adv ") or group.startswith("dis "):
+            prefix = group[:4]
+            rest = group[4:]
+
+        # Split remaining on spaces, but keep 'vs X' together
+        tokens = rest.split()
+        i = 0
+        exprs = []
+        while i < len(tokens):
+            expr = tokens[i]
+            if i + 2 < len(tokens) and tokens[i + 1] == "vs":
+                expr += f" vs {tokens[i + 2]}"
+                i += 3
+            else:
+                i += 1
+            exprs.append(prefix + expr)
+
+        for expr in exprs:
+            print(parse_and_roll(expr))
+
+if __name__ == "__main__":
+    main()

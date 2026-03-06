@@ -35,11 +35,11 @@ _What does this NPC want? What drives them?_
 
 ## Knowledge
 
-_What does this NPC know that could be useful to the player?_
+_What does this NPC know that could be useful to the player? The Quest Link column is a DM reference — the NPC agent uses only the Topic and Knowledge columns._
 
-| Topic | Knowledge |
-|-------|-----------|
-| — | — |
+| Topic | Knowledge | Quest Link | Will Share? |
+|-------|-----------|------------|-------------|
+| — | — | — | Freely / If trusted / If persuaded DC X / Never |
 
 ## Stat Block
 

@@ -29,9 +29,16 @@ _None yet._
 | Conditions | None |
 | Gold | — |
 
+## Quest Secrets Summary
+
+> Canonical source: [quests.md](../campaign/quests.md)
+
+| Quest | Truth (brief) | Clues Found / Total | Key NPCs | Next Available Clue |
+|-------|--------------|---------------------|----------|---------------------|
+
 ## Clock Summary
 
 > Canonical source: [clocks.md](../campaign/clocks.md)
 
-| Clock | Type | Progress | Next Trigger |
-|-------|------|----------|-------------|
+| Clock | Type | Progress | Next Trigger | Consequence (when full) |
+|-------|------|----------|-------------|------------------------|

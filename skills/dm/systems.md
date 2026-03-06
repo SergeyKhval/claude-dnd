@@ -71,8 +71,9 @@ The world moves and surprises. Random tables in [random-tables.md](random-tables
 1. Roll d20
 2. On **1-10:** Nothing notable — describe the atmosphere, move on
 3. On **11-20:** Use the corresponding entry from the relevant table (Town, Road, Wilderness, Dungeon)
-4. Expand the seed narratively — tie it to active quests, clocks, or factions when possible
-5. Not every random event needs to be combat — most are flavor, information, or choice
+4. **Check active quest secrets** — if the random event can plausibly connect to a quest's evidence trail, use it to surface a clue or reinforce the quest's truth. Aim for ~1 in 3 random events to tie back to an active quest.
+5. Expand the seed narratively — tie it to active quests, clocks, or factions when possible
+6. Not every random event needs to be combat — most are flavor, information, or choice
 
 ---
 

@@ -50,6 +50,13 @@ _What happened here? What's the backstory?_
 
 _What's going on here right now?_
 
+## Quest Clues
+
+_Clues seeded at this location by active quests. Weave these into scene descriptions naturally — don't announce them._
+
+| Quest | Clue | Found Via | Discovered? |
+|-------|------|-----------|-------------|
+
 ## DM Notes
 
 _Secret information, hidden details, future plans._

@@ -44,7 +44,12 @@ Collaborate with the player on the type of setting they want, then:
 2. Create the starting location and write to `game/locations/`
 3. Create 2-3 starting NPCs and write to `game/characters/npcs/` (include `## Conversation Log` section — see NPC template)
 4. Create initial factions and write to `game/campaign/factions.md`
-5. Create the opening quest hook and write to `game/campaign/quests.md`
+5. Create **starting quests** using the Secrets-First Protocol (read `${CLAUDE_PLUGIN_ROOT}/skills/dm/quest-design.md`):
+   - **1 Standard quest** — the main opening hook that draws the player into the world
+   - **1-2 Minor quests** — smaller threads discoverable through NPCs or exploration
+   - For each: define the Truth first, build evidence trail, seed NPC Knowledge tables and location Quest Clues
+   - Write all quests to `game/campaign/quests.md`
+   - Populate the Quest Secrets Summary in `game/sessions/current.md`
 6. Update `game/locations/index.md` with starting locations
 7. Update `game/GAME.md` with all cross-references
 8. Write the opening scene to `game/sessions/current.md`
