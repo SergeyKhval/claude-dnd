@@ -121,18 +121,69 @@ Each piece of data has ONE canonical file. Update only the canonical source. `cu
 
 ---
 
-## NPC Behavior
+## NPC Behavior — Sub-Agent System
 
-1. **Always read the NPC's `.md` file** before roleplaying them
-2. **NPC Knowledge is layered:**
-   - **Core Knowledge:** What's written in their file — the NPC knows this for certain
-   - **Plausible Knowledge:** What the NPC would reasonably know based on their role, location, and background. The DM can infer this during roleplay.
-   - **Unknown:** Things outside the NPC's world — they don't know and should say so
-   - **Rule:** If an NPC reveals plausible knowledge not in their file, add it to their Knowledge section immediately
-3. NPCs act according to their Motivation and Personality
-4. Track disposition changes and update the NPC file
-5. NPCs should feel like real people with their own goals, not quest dispensers
-6. Use distinct speech patterns or mannerisms noted in their file
+All named NPC conversations use the **NPC Agent System**. Each NPC is played by a dedicated sub-agent that stays in character and only knows what the NPC would know.
+
+### When to Spawn an NPC Agent
+
+- **Always:** Any direct conversation with a named NPC (2+ exchanges, information sharing, persuasion, negotiation)
+- **Skip (DM handles inline):** Trivial exchanges with no information flow ("I'll take an ale", a guard waves you through). Use a brief in-character line without spawning.
+- **Off-screen NPC interactions:** When NPCs interact without the player present (clock triggers, faction events), the DM narrates and updates both NPC files directly. No agent needed.
+
+### Dialog Mode — How Conversations Work
+
+NPC conversations run as **multi-turn dialogues**. The player types their actual words, not a summary.
+
+**Flow:**
+1. Player initiates conversation (e.g., "I walk up to Voss. 'Hey Voss, got a minute?'")
+2. **Do NOT announce dialog mode or explain what you're doing.** Don't say things like "Let me spawn the agent" or "Entering dialog mode." Just seamlessly present the NPC's response as part of the scene. The player ends the conversation by walking away or changing the subject — no special command needed.
+3. Read `${CLAUDE_SKILL_DIR}/templates/npc-agent-prompt.md`. Fill in all bracketed placeholders (`[NPC Name]`, `[NPC_FILE_PATH]`, Scene Brief fields). Pass the result verbatim — do not paraphrase or omit any rules. Optionally add a DM Directive to steer the NPC's behavior (e.g., "You're nervous today — Tide enforcers visited this morning", "Bring up the rumor about bodies at the docks if it feels natural", "Be evasive about the cellar"). Delete the directive section if not needed.
+4. Spawn the NPC agent via `Agent` tool (subagent_type: `general-purpose`). Pass the filled-in template as the prompt.
+5. Present NPC's response to the player
+6. Player responds with their next line of dialogue
+7. **Resume** the same agent (using agent ID) with the player's response
+8. Repeat steps 5-7 until conversation ends
+9. **Post-conversation processing** (see below)
+
+### Ability Checks During Dialog
+
+The NPC agent will signal when a check is needed and provide two response branches (success/failure). When this happens:
+
+1. Announce the check to the player: *"Voss is sizing you up — Deception check."*
+2. Roll the dice transparently using standard dice format
+3. Pick the appropriate branch from the agent's response
+4. Resume the agent with the result: *"The player's Deception check succeeded (rolled 18 vs your Insight 11). Continue with the success path."*
+
+Common checks during NPC dialog:
+- **Persuasion** — convincing, bargaining, requesting favors
+- **Deception** — lying, misleading, hiding intent
+- **Intimidation** — threatening, pressuring
+- **Insight** — reading the NPC, detecting lies (player rolls vs NPC's Deception)
+- **Performance** — entertaining, impersonating
+
+### Post-Conversation Processing
+
+After the conversation ends (player walks away, changes subject, or conversation reaches natural end):
+
+1. **Review the NPC agent's file updates** — the agent updates its own `.md` file after each exchange
+2. **Process knowledge propagation** — if the agent output a `## Knowledge Propagation` block:
+   - Read each referenced NPC file
+   - Add the noted facts to their `## Knowledge` table and/or `## Conversation Log`
+   - Only propagate if the other NPC would **plausibly** learn this (see propagation rules below)
+3. **Update `current.md`** with a brief note about the conversation
+4. **Advance any relevant clocks** if the conversation crossed a scene boundary
+
+### Knowledge Propagation Rules
+
+| Scenario | Update X's file? | Update Y's file? |
+|----------|-----------------|-----------------|
+| X tells player about Y | Yes (conversation log) | No — Y doesn't know they were discussed |
+| X says "I saw Y at the tavern" | Yes | Yes — Y was there, knows X saw them |
+| Player tells X something about Y | Yes (learned from player) | No — unless player also tells Y |
+| X and Y are in the same scene | Yes | Yes — both witness the interaction |
+| Faction-internal info (X and Y same faction) | Yes | Yes — assume info flows within faction |
+| Gossip/rumors (time passes) | — | DM propagates to NPCs who'd plausibly hear (tavern owners, faction members, street kids) |
 
 ---
 

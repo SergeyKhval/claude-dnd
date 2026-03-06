@@ -9,7 +9,7 @@ Create a new campaign by following these steps:
 
 ## Step 1: Scaffold the game directory
 
-Create the following directory structure. Use the templates from `${CLAUDE_SKILL_DIR}/../skills/dm/templates/` as starting points for each file:
+Create the following directory structure. Use the templates from `${CLAUDE_PLUGIN_ROOT}/skills/dm/templates/` as starting points for each file:
 
 ```
 game/
@@ -42,7 +42,7 @@ Collaborate with the player on the type of setting they want, then:
 
 1. Generate the world and write to `game/campaign/world.md`
 2. Create the starting location and write to `game/locations/`
-3. Create 2-3 starting NPCs and write to `game/characters/npcs/`
+3. Create 2-3 starting NPCs and write to `game/characters/npcs/` (include `## Conversation Log` section — see NPC template)
 4. Create initial factions and write to `game/campaign/factions.md`
 5. Create the opening quest hook and write to `game/campaign/quests.md`
 6. Update `game/locations/index.md` with starting locations
@@ -51,7 +51,7 @@ Collaborate with the player on the type of setting they want, then:
 
 ## Step 3: Character Creation
 
-Guide the player through creating their character. Use the character sheet template at `${CLAUDE_SKILL_DIR}/../skills/dm/templates/character-sheet.md` for the final output format.
+Guide the player through creating their character. Use the character sheet template at `${CLAUDE_PLUGIN_ROOT}/skills/dm/templates/character-sheet.md` for the final output format.
 
 1. Ask the player for their character concept (or offer suggestions that fit the world)
 2. Guide through race selection — explain racial traits

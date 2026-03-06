@@ -75,4 +75,8 @@ _Key things this NPC might say. Conversation hooks._
 
 ## History with Player
 
-_Record of significant interactions._
+_DM-maintained summary of significant interactions and relationship milestones._
+
+## Conversation Log
+
+_Agent-maintained log of conversations. Populated during dialog mode._
