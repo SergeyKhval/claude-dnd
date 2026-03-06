@@ -145,3 +145,22 @@ If an encounter is too easy:
 - Reinforcements arrive
 - The environment shifts (rising water, collapsing ceiling)
 - The creature reveals a second phase or ability
+
+---
+
+## Pre-Combat Checklist
+
+**The DM protocol in SKILL.md requires completing this checklist before placing enemies.**
+
+Before every encounter:
+
+1. [ ] Read the PC's character sheet — note level, HP, AC, and available resources
+2. [ ] Pick target difficulty (Easy/Medium/Hard/Deadly) from the level table above
+3. [ ] Pick enemy CR from the table — do not exceed the target difficulty CR
+4. [ ] If using multiple enemies: max 2 for solo play, each at one CR step lower
+5. [ ] Verify no single attack exceeds the max single-hit threshold for this difficulty
+6. [ ] At levels 1-3: no multiattack unless the encounter is intentionally Deadly
+7. [ ] For quest/bounty targets: use Hard difficulty, not Deadly — the player accepted this as achievable
+8. [ ] Give enemies a weakness or exploitable behavior
+9. [ ] Ensure at least one viable escape route exists in the environment
+10. [ ] If the encounter exceeds Deadly: warn the player before combat begins

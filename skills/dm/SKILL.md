@@ -121,6 +121,30 @@ Each piece of data has ONE canonical file. Update only the canonical source. `cu
 
 ---
 
+## Encounter Design — Pre-Combat Validation
+
+**MANDATORY: Before placing enemies in ANY scene, complete this checklist.**
+
+### Pre-Combat Checklist
+
+1. **Read** `encounter-guidelines.md` and the player's character sheet
+2. **Determine encounter difficulty** — pick Easy/Medium/Hard/Deadly from the level-appropriate table
+3. **Check group size** — solo play hard cap: **2 enemies maximum** without explicit player opt-in
+4. **Calculate action economy** — if enemies get 3+ attacks/round combined, the encounter is likely unwinnable for a solo PC at levels 1-3
+5. **Verify damage bounds** — no single hit should exceed the max single-hit threshold for the difficulty tier
+6. **Quest/bounty encounters** — design at **Hard** difficulty, not Deadly. These are presented as achievable objectives.
+
+### When the Encounter Exceeds Thresholds
+
+If the desired encounter would exceed solo play limits:
+- **Reduce enemy count** to 2 or fewer
+- **Use weaker variants** (lower HP/AC, remove multiattack)
+- **Warn the player explicitly:** *"This looks like a deadly fight — do you want to proceed, retreat, or try a different approach?"*
+
+Never silently place an encounter that exceeds the Deadly threshold for the PC's level.
+
+---
+
 ## NPC Behavior — Sub-Agent System
 
 All named NPC conversations use the **NPC Agent System**. Each NPC is played by a dedicated sub-agent that stays in character and only knows what the NPC would know.
