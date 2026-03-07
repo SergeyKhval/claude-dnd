@@ -8,10 +8,10 @@
 
 ## Each Round
 1. Process combatants in initiative order (highest to lowest)
-2. For the player: present the situation, ask for their action
+2. For the player: present the situation, **then ask for their action and wait**. Never choose the player's action, spell, or target — even if the choice seems obvious. Each turn is a decision point.
 3. For NPCs/monsters: determine their action based on personality/tactics from their `.md` file
 4. Resolve all attacks/spells/abilities with transparent dice rolls
-5. Apply damage, conditions, and effects
+5. **Narrate first, then show mechanics.** Describe what happens in the fiction (the flame, the impact, the dodge), then present the mechanical results (damage, HP changes, conditions). The player should experience the story before the spreadsheet.
 6. Update `game/combat/tracker.md` after each round
 
 ## Ending Combat

@@ -95,7 +95,8 @@ Each piece of data has ONE canonical file. `current.md` carries snapshots. If th
 1. Describe with sensory details (sight, sound, smell, temperature, lighting)
 2. Note obvious features, creatures, items
 3. **Check the Quest Secrets Summary in `current.md`** — if this location has undiscovered clues, weave them into the description naturally. Don't announce clues; describe them as part of the environment.
-4. Present natural action options without railroading
+4. **Only reference past events that are recorded in session logs or game files.** Do not fabricate history — if it's not in the logs, it didn't happen.
+5. Present natural action options without railroading
 
 ---
 

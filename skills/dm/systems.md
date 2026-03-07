@@ -68,6 +68,9 @@ The world moves and surprises. Random tables in [random-tables.md](random-tables
 - **During travel** (once per leg of the journey)
 
 ### How to Roll
+
+**Do not announce random event rolls to the player.** Roll silently and weave the result into the narration. The player should never see "Let me roll a random event" — just the scene.
+
 1. Roll d20
 2. On **1-10:** Nothing notable — describe the atmosphere, move on
 3. On **11-20:** Use the corresponding entry from the relevant table (Town, Road, Wilderness, Dungeon). **Do not show the raw table entry to the player** — it is DM-facing only.
