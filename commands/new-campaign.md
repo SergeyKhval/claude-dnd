@@ -69,6 +69,10 @@ Guide the player through creating their character. Use the character sheet templ
 9. Write the complete character sheet to `game/characters/player/<name>.md`
 10. Update `game/GAME.md` and `game/inventory/party.md`
 
+## Step 4: Validate
+
+Run `${CLAUDE_PLUGIN_ROOT}/skills/dm/audit-encounters --game-dir game` to verify all encounters in location files are valid for the PC's level. Fix any failures before starting play.
+
 ### Guidelines
 
 - Roll all dice transparently (4d6 drop lowest, starting gold, etc.)

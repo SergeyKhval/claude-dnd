@@ -16,7 +16,10 @@
 
 ## Ending Combat
 1. Narrate the outcome
-2. Calculate and award XP (or note milestone progress)
+2. Calculate XP using `${CLAUDE_SKILL_DIR}/calc-xp` — never calculate XP manually:
+   ```
+   ${CLAUDE_SKILL_DIR}/calc-xp --level <PC level> --current-xp <current XP> <CR> <CR> ...
+   ```
 3. Archive the combat to the session log
 4. Clear `game/combat/tracker.md` (reset to "No active combat")
 5. Update character sheet (HP, spell slots, abilities used)

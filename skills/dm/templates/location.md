@@ -6,6 +6,7 @@
 |-----------|-------|
 | Type | City / Town / Dungeon / Wilderness / Building |
 | Region | — |
+| Level | — (target PC level for encounters here) |
 | Population | — |
 | Government | — |
 | Status | Explored / Partially Explored / Known / Rumored |
@@ -32,9 +33,9 @@ _Key areas within this location._
 
 ## Encounters
 
-| Encounter | CR | Trigger | Status |
-|-----------|-----|---------|--------|
-| — | — | — | Active / Cleared |
+| Encounter | Difficulty | Enemies (name:CR) | Trigger | Status |
+|-----------|------------|-------------------|---------|--------|
+| — | — | — | — | Active / Cleared |
 
 ## Loot / Resources
 

@@ -1,0 +1,210 @@
+#!/usr/bin/env python3
+"""Validate encounter balance for a solo D&D 5e campaign.
+
+Usage:
+  ./validate-encounter --level 1 --difficulty hard --enemies "wolf:1/4" "goblin:1/4"
+  ./validate-encounter --level 1 --difficulty medium --enemies "skeleton:1/8"
+  ./validate-encounter --level 3 --difficulty hard --enemies "bugbear:1"
+  ./validate-encounter --level 1 --enemies "shadow:1/2"  (defaults to hard)
+
+Arguments:
+  --level N         Player character level (required)
+  --difficulty D    Target difficulty: easy, medium, hard, deadly (default: hard)
+  --enemies CR...   One or more enemies as "name:CR" (CR can be 0, 1/8, 1/4, 1/2, or integer)
+"""
+
+import sys
+
+# CR caps per level per difficulty (solo-adjusted)
+# Format: CR_CAPS[level][difficulty] = max CR for a single enemy
+CR_CAPS = {
+    1: {"easy": 0,     "medium": 0.125, "hard": 0.25,  "deadly": 0.5},
+    2: {"easy": 0.125, "medium": 0.25,  "hard": 0.5,   "deadly": 1},
+    3: {"easy": 0.25,  "medium": 0.5,   "hard": 1,     "deadly": 2},
+    4: {"easy": 0.5,   "medium": 1,     "hard": 2,     "deadly": 3},
+    5: {"easy": 1,     "medium": 2,     "hard": 3,     "deadly": 5},
+}
+
+# Max single-hit damage thresholds
+MAX_DAMAGE = {
+    1: {"easy": 6,  "medium": 8,  "hard": 10, "deadly": 999},
+    2: {"easy": 10, "medium": 12, "hard": 14, "deadly": 999},
+    3: {"easy": 14, "medium": 18, "hard": 20, "deadly": 999},
+    4: {"easy": 20, "medium": 24, "hard": 27, "deadly": 999},
+    5: {"easy": 26, "medium": 30, "hard": 34, "deadly": 999},
+}
+
+# CR stat benchmarks: (HP range, AC range, attack bonus, damage/round, max single hit)
+CR_STATS = {
+    0:     {"hp": "1-6",    "ac": "10-12", "atk": "+2 to +3", "dmg_round": "1-3",   "max_hit": 3},
+    0.125: {"hp": "7-12",   "ac": "11-13", "atk": "+3",       "dmg_round": "2-4",   "max_hit": 4},
+    0.25:  {"hp": "13-20",  "ac": "11-13", "atk": "+3 to +4", "dmg_round": "4-6",   "max_hit": 6},
+    0.5:   {"hp": "21-30",  "ac": "12-13", "atk": "+3 to +4", "dmg_round": "6-8",   "max_hit": 8},
+    1:     {"hp": "31-45",  "ac": "13",    "atk": "+4 to +5", "dmg_round": "9-14",  "max_hit": 14},
+    2:     {"hp": "46-60",  "ac": "13-14", "atk": "+5",       "dmg_round": "15-20", "max_hit": 20},
+    3:     {"hp": "61-80",  "ac": "13-14", "atk": "+5 to +6", "dmg_round": "21-26", "max_hit": 26},
+    4:     {"hp": "81-100", "ac": "14",    "atk": "+6",       "dmg_round": "27-32", "max_hit": 32},
+    5:     {"hp": "101-120","ac": "15",    "atk": "+7",       "dmg_round": "33-38", "max_hit": 38},
+}
+
+MAX_SOLO_ENEMIES = 2
+
+
+def parse_cr(cr_str):
+    """Parse CR string like '1/4', '0', '2' into a float."""
+    cr_str = cr_str.strip()
+    if "/" in cr_str:
+        num, den = cr_str.split("/")
+        return int(num) / int(den)
+    return float(cr_str)
+
+
+def format_cr(cr):
+    """Format CR float back to readable string."""
+    if cr == 0.125:
+        return "1/8"
+    if cr == 0.25:
+        return "1/4"
+    if cr == 0.5:
+        return "1/2"
+    if cr == int(cr):
+        return str(int(cr))
+    return str(cr)
+
+
+def parse_enemy(enemy_str):
+    """Parse 'name:CR' into (name, cr_float)."""
+    if ":" not in enemy_str:
+        print(f"ERROR: Enemy must be 'name:CR' format, got: {enemy_str}")
+        sys.exit(1)
+    name, cr_str = enemy_str.rsplit(":", 1)
+    return name.strip(), parse_cr(cr_str)
+
+
+def validate(level, difficulty, enemies):
+    errors = []
+    warnings = []
+
+    if level not in CR_CAPS:
+        errors.append(f"Level {level} not in range 1-5. Add to CR_CAPS if needed.")
+        return errors, warnings
+
+    max_cr = CR_CAPS[level][difficulty]
+    max_dmg = MAX_DAMAGE[level][difficulty]
+
+    # Check enemy count
+    if len(enemies) > MAX_SOLO_ENEMIES:
+        errors.append(
+            f"ENEMY COUNT: {len(enemies)} enemies exceeds solo play max of {MAX_SOLO_ENEMIES}. "
+            f"Solo PCs can't handle action economy of {len(enemies)} opponents."
+        )
+
+    # Group encounter CR adjustment
+    if len(enemies) >= 2:
+        warnings.append(
+            f"GROUP ENCOUNTER: {len(enemies)} enemies — each should be one CR step lower than "
+            f"single-enemy target. Effective CR is ~150% of individual CR."
+        )
+
+    for name, cr in enemies:
+        # Check CR cap
+        if cr > max_cr:
+            errors.append(
+                f"CR TOO HIGH: {name} (CR {format_cr(cr)}) exceeds {difficulty} cap "
+                f"of CR {format_cr(max_cr)} for level {level}."
+            )
+
+        # Check max single hit damage
+        if cr in CR_STATS:
+            stats = CR_STATS[cr]
+            if stats["max_hit"] > max_dmg:
+                errors.append(
+                    f"DAMAGE TOO HIGH: {name} (CR {format_cr(cr)}) can deal up to "
+                    f"{stats['max_hit']} damage per hit. Max for {difficulty} at level {level} "
+                    f"is {max_dmg}."
+                )
+
+        # Check multiattack at low levels
+        if level <= 3 and cr >= 1 and difficulty != "deadly":
+            warnings.append(
+                f"MULTIATTACK WARNING: {name} (CR {format_cr(cr)}) likely has multiattack. "
+                f"Avoid multiattack at levels 1-3 unless intentionally Deadly."
+            )
+
+    return errors, warnings
+
+
+def main():
+    args = sys.argv[1:]
+
+    if not args or "--help" in args or "-h" in args:
+        print(__doc__)
+        sys.exit(0)
+
+    level = None
+    difficulty = "hard"
+    enemy_strs = []
+
+    i = 0
+    while i < len(args):
+        if args[i] == "--level":
+            level = int(args[i + 1])
+            i += 2
+        elif args[i] == "--difficulty":
+            difficulty = args[i + 1].lower()
+            i += 2
+        elif args[i] == "--enemies":
+            i += 1
+            while i < len(args) and not args[i].startswith("--"):
+                enemy_strs.append(args[i])
+                i += 1
+        else:
+            i += 1
+
+    if level is None:
+        print("ERROR: --level is required")
+        sys.exit(1)
+
+    if not enemy_strs:
+        print("ERROR: --enemies is required (e.g., --enemies \"wolf:1/4\")")
+        sys.exit(1)
+
+    if difficulty not in ("easy", "medium", "hard", "deadly"):
+        print(f"ERROR: Invalid difficulty '{difficulty}'. Use: easy, medium, hard, deadly")
+        sys.exit(1)
+
+    enemies = [parse_enemy(e) for e in enemy_strs]
+    errors, warnings = validate(level, difficulty, enemies)
+
+    # Print summary
+    print(f"Level {level} | {difficulty.upper()} | {len(enemies)} enemy(ies)")
+    print(f"CR cap: {format_cr(CR_CAPS[level][difficulty])}")
+    print()
+
+    for name, cr in enemies:
+        stats = CR_STATS.get(cr, {})
+        hp = stats.get("hp", "?")
+        ac = stats.get("ac", "?")
+        atk = stats.get("atk", "?")
+        dmg = stats.get("dmg_round", "?")
+        print(f"  {name}: CR {format_cr(cr)} | HP {hp} | AC {ac} | {atk} to hit | {dmg} dmg/round")
+
+    print()
+
+    if errors:
+        print("FAIL")
+        for e in errors:
+            print(f"  X {e}")
+    else:
+        print("PASS")
+
+    if warnings:
+        for w in warnings:
+            print(f"  ! {w}")
+
+    if errors:
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

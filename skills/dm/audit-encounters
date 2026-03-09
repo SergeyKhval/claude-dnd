@@ -1,0 +1,324 @@
+#!/usr/bin/env python3
+"""Audit all encounters across location files in a campaign.
+
+Scans every location .md file, reads the location's Level from its
+overview table, and validates each encounter against that level.
+
+Usage:
+  ./audit-encounters --game-dir /path/to/game
+
+Exit code 0 = all pass, 1 = failures found.
+"""
+
+import sys
+import os
+import re
+import glob
+
+
+# --- Validation logic (shared with validate-encounter) ---
+
+CR_CAPS = {
+    1: {"easy": 0,     "medium": 0.125, "hard": 0.25,  "deadly": 0.5},
+    2: {"easy": 0.125, "medium": 0.25,  "hard": 0.5,   "deadly": 1},
+    3: {"easy": 0.25,  "medium": 0.5,   "hard": 1,     "deadly": 2},
+    4: {"easy": 0.5,   "medium": 1,     "hard": 2,     "deadly": 3},
+    5: {"easy": 1,     "medium": 2,     "hard": 3,     "deadly": 5},
+}
+
+MAX_SOLO_ENEMIES = 2
+
+
+def parse_cr(cr_str):
+    cr_str = cr_str.strip()
+    if "/" in cr_str:
+        num, den = cr_str.split("/")
+        return int(num) / int(den)
+    return float(cr_str)
+
+
+def format_cr(cr):
+    if cr == 0.125: return "1/8"
+    if cr == 0.25:  return "1/4"
+    if cr == 0.5:   return "1/2"
+    if cr == int(cr): return str(int(cr))
+    return str(cr)
+
+
+def validate_encounter(level, difficulty, enemies):
+    """Returns (errors, warnings) for a single encounter."""
+    errors = []
+    warnings = []
+
+    if level not in CR_CAPS:
+        errors.append(f"Level {level} not in range 1-5")
+        return errors, warnings
+
+    max_cr = CR_CAPS[level][difficulty]
+
+    if len(enemies) > MAX_SOLO_ENEMIES:
+        errors.append(
+            f"{len(enemies)} enemies exceeds solo max of {MAX_SOLO_ENEMIES}"
+        )
+
+    for name, cr in enemies:
+        if cr > max_cr:
+            errors.append(
+                f"{name} CR {format_cr(cr)} exceeds {difficulty} cap of CR {format_cr(max_cr)} for level {level}"
+            )
+
+    return errors, warnings
+
+
+# --- File parsing ---
+
+def parse_location_level(lines):
+    """Extract Level from the overview table."""
+    for line in lines:
+        m = re.match(r'\|\s*Level\s*\|\s*(\d+)', line.strip())
+        if m:
+            return int(m.group(1))
+    return None
+
+
+def parse_enemies_new_format(enemies_cell):
+    """Parse 'goblin:1/4, goblin:1/4' from the Enemies (name:CR) column."""
+    enemies = []
+    for part in re.split(r'[,;]', enemies_cell):
+        part = part.strip()
+        if not part or part == "—":
+            continue
+        m = re.match(r'^(.+?)\s*:\s*(\d+(?:/\d+)?)$', part)
+        if m:
+            enemies.append((m.group(1).strip(), parse_cr(m.group(2))))
+    return enemies
+
+
+def parse_enemies_old_format(encounter_cell, cr_cell):
+    """Best-effort parse of old format encounter tables."""
+    # Extract enemy count from encounter name
+    count_match = re.search(r'(\d+)\s+\w+', encounter_cell)
+    count = int(count_match.group(1)) if count_match else 1
+
+    # Check for "X + Y" pattern like "4 goblins + 2 archers"
+    plus_match = re.findall(r'(\d+)\s+\w+', encounter_cell)
+    if plus_match and len(plus_match) > 1:
+        count = sum(int(m) for m in plus_match)
+
+    # Parse CR - strip "each", "(total)", etc.
+    cr_clean = re.sub(r'\s*\(.*?\)\s*', '', cr_cell)
+    cr_clean = re.sub(r'\s*each\s*', '', cr_clean)
+    cr_clean = cr_clean.strip()
+
+    if not cr_clean or cr_clean == "—":
+        return None
+
+    try:
+        cr = parse_cr(cr_clean)
+    except (ValueError, ZeroDivisionError):
+        return None
+
+    # If "(total)" was in the CR, divide by count for per-enemy CR
+    if "(total)" in cr_cell.lower() and count > 1:
+        per_enemy_cr = cr / count
+        standard_crs = [0, 0.125, 0.25, 0.5, 1, 2, 3, 4, 5]
+        per_enemy_cr = min(standard_crs, key=lambda x: abs(x - per_enemy_cr))
+        cr = per_enemy_cr
+
+    # Extract creature name from parenthetical
+    paren_match = re.search(r'\(.*?(\d+)\s+(\w+)', encounter_cell)
+    if paren_match:
+        name = paren_match.group(2).rstrip('s')
+    else:
+        name = re.sub(r'\s*\+.*', '', encounter_cell).strip()
+        name = re.sub(r'\s*\(.*?\)', '', name).strip()
+
+    enemies = [(name, cr)] * count
+    return enemies
+
+
+def parse_location_file(filepath):
+    """Parse a location file. Returns (level, encounters) or (None, encounters).
+
+    Each encounter is (name, enemies_list_or_None, difficulty_or_None, status, line_no).
+    """
+    with open(filepath) as f:
+        lines = f.readlines()
+
+    level = parse_location_level(lines)
+
+    encounters = []
+    in_encounter_section = False
+    header_cols = None
+
+    for i, line in enumerate(lines, 1):
+        stripped = line.strip()
+
+        if re.match(r'^##\s+Encounters', stripped):
+            in_encounter_section = True
+            header_cols = None
+            continue
+
+        if in_encounter_section and re.match(r'^##\s+', stripped) and not re.match(r'^##\s+Encounters', stripped):
+            in_encounter_section = False
+            continue
+
+        if not in_encounter_section:
+            continue
+
+        if not stripped.startswith('|'):
+            continue
+
+        cells = [c.strip() for c in stripped.split('|')[1:-1]]
+
+        if header_cols is None and len(cells) >= 3:
+            header_lower = [c.lower() for c in cells]
+            if 'encounter' in header_lower[0]:
+                header_cols = header_lower
+                continue
+
+        if all(re.match(r'^[-:]+$', c) for c in cells):
+            continue
+
+        if header_cols is None or len(cells) < len(header_cols):
+            continue
+
+        if cells[0] in ("—", "-"):
+            continue
+
+        status = None
+        for j, col in enumerate(header_cols):
+            if 'status' in col and j < len(cells):
+                status = cells[j].strip()
+
+        encounter_name = cells[0]
+
+        if any('enemies' in col for col in header_cols):
+            enemies_col_idx = next(j for j, c in enumerate(header_cols) if 'enemies' in c)
+            difficulty_col_idx = next((j for j, c in enumerate(header_cols) if 'difficulty' in c), None)
+            enemies_cell = cells[enemies_col_idx] if enemies_col_idx < len(cells) else ""
+            enemies = parse_enemies_new_format(enemies_cell)
+            difficulty = cells[difficulty_col_idx].lower() if difficulty_col_idx and difficulty_col_idx < len(cells) else None
+            if enemies:
+                encounters.append((encounter_name, enemies, difficulty, status, i))
+            elif enemies_cell and enemies_cell != "—":
+                encounters.append((encounter_name, None, difficulty, status, i))
+        else:
+            cr_col_idx = next((j for j, c in enumerate(header_cols) if c == 'cr'), None)
+            if cr_col_idx is not None and cr_col_idx < len(cells):
+                cr_cell = cells[cr_col_idx]
+                enemies = parse_enemies_old_format(encounter_name, cr_cell)
+                if enemies:
+                    encounters.append((encounter_name, enemies, None, status, i))
+                elif cr_cell and cr_cell != "—":
+                    encounters.append((encounter_name, None, None, status, i))
+
+    return level, encounters
+
+
+def main():
+    args = sys.argv[1:]
+
+    if "--help" in args or "-h" in args:
+        print(__doc__)
+        sys.exit(0)
+
+    game_dir = None
+
+    i = 0
+    while i < len(args):
+        if args[i] == "--game-dir":
+            game_dir = args[i + 1]
+            i += 2
+        else:
+            i += 1
+
+    if game_dir is None:
+        print("ERROR: --game-dir is required")
+        sys.exit(1)
+
+    locations_dir = os.path.join(game_dir, "locations")
+    if not os.path.isdir(locations_dir):
+        print(f"ERROR: {locations_dir} not found")
+        sys.exit(1)
+
+    location_files = sorted(glob.glob(os.path.join(locations_dir, "*.md")))
+
+    total_encounters = 0
+    total_pass = 0
+    total_fail = 0
+    total_unparseable = 0
+    total_no_level = 0
+    all_errors = []
+
+    for filepath in location_files:
+        filename = os.path.basename(filepath)
+        level, encounters = parse_location_file(filepath)
+
+        if not encounters:
+            continue
+
+        print(f"\n{filename} (level {level or '?'})")
+        print(f"{'─' * (len(filename) + len(f' (level {level or "?"})'))}")
+
+        if level is None:
+            total_no_level += 1
+            print(f"  ? No Level in overview table — add | Level | N | to validate")
+            for enc_name, _, _, _, line_no in encounters:
+                print(f"  Line {line_no}: {enc_name} — SKIPPED")
+            continue
+
+        for enc_name, enemies, difficulty, status, line_no in encounters:
+            total_encounters += 1
+
+            if enemies is None:
+                total_unparseable += 1
+                print(f"  Line {line_no}: {enc_name}")
+                print(f"    ? UNPARSEABLE — update to new format: Enemies (name:CR)")
+                continue
+
+            diff = difficulty or "hard"
+            errors, warnings = validate_encounter(level, diff, enemies)
+
+            enemy_summary = ", ".join(f"{n} CR {format_cr(cr)}" for n, cr in enemies)
+            status_tag = f" [{status}]" if status else ""
+
+            if errors:
+                total_fail += 1
+                print(f"  Line {line_no}: {enc_name}{status_tag}")
+                print(f"    Enemies: {enemy_summary}")
+                for e in errors:
+                    print(f"    X {e}")
+                all_errors.append((filename, line_no, enc_name, errors))
+            else:
+                total_pass += 1
+                print(f"  Line {line_no}: {enc_name}{status_tag}")
+                print(f"    Enemies: {enemy_summary}")
+                print(f"    OK")
+
+    # Summary
+    print(f"\n{'═' * 40}")
+    print(f"{total_encounters} encounters scanned")
+    print(f"  PASS: {total_pass}  FAIL: {total_fail}  UNPARSEABLE: {total_unparseable}")
+
+    if total_no_level:
+        print(f"  {total_no_level} location(s) missing Level — encounters skipped")
+
+    if all_errors:
+        print(f"\nFailed encounters:")
+        for filename, line_no, enc_name, errors in all_errors:
+            print(f"  {filename}:{line_no} — {enc_name}")
+            for e in errors:
+                print(f"    X {e}")
+        sys.exit(1)
+    elif total_unparseable > 0:
+        print(f"\n{total_unparseable} encounter(s) could not be parsed.")
+        print(f"Update them to the new template format with Enemies (name:CR) column.")
+    else:
+        print(f"\nAll encounters valid.")
+
+    sys.exit(0)
+
+
+if __name__ == "__main__":
+    main()

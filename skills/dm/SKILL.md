@@ -28,10 +28,11 @@ Reference files (read on demand during play):
 
 ---
 
-## Dice Rolling
+## Scripts — MANDATORY
 
-Use `${CLAUDE_SKILL_DIR}/roll` for all dice rolls. Never narrate a result without rolling.
+These scripts exist for a reason: **never do their job manually.**
 
+**Dice:** `${CLAUDE_SKILL_DIR}/roll` — All dice rolls. Never narrate a result without rolling.
 ```
 ${CLAUDE_SKILL_DIR}/roll d20+5 vs 16            # attack or check vs DC/AC
 ${CLAUDE_SKILL_DIR}/roll adv d20+3 vs 14        # advantage
@@ -42,7 +43,22 @@ ${CLAUDE_SKILL_DIR}/roll init d20+2 d20+1 d20+0 # batch initiative
 ${CLAUDE_SKILL_DIR}/roll 4d6k3                  # 4d6 keep highest 3 (ability scores)
 ```
 
-- Batch multiple rolls in one call to reduce wait time (e.g., attack + damage, all initiative rolls)
+**Encounter validation:** `${CLAUDE_SKILL_DIR}/validate-encounter` — Before every combat. Do not start combat if it returns FAIL.
+```
+${CLAUDE_SKILL_DIR}/validate-encounter --level <PC level> --difficulty <easy|medium|hard|deadly> --enemies "name:CR" "name:CR"
+```
+
+**Encounter audit:** `${CLAUDE_SKILL_DIR}/audit-encounters` — After creating a campaign or adding locations with encounters. Scans all location files, reads each location's Level, and validates every encounter against it.
+```
+${CLAUDE_SKILL_DIR}/audit-encounters --game-dir <path/to/game>
+```
+
+**XP calculation:** `${CLAUDE_SKILL_DIR}/calc-xp` — After every combat. Never calculate XP manually.
+```
+${CLAUDE_SKILL_DIR}/calc-xp --level <PC level> --current-xp <current XP> <CR> <CR> ...
+```
+
+- Batch multiple dice rolls in one call to reduce wait time (e.g., attack + damage, all initiative rolls)
 - Nat 20 on attacks = critical hit, nat 1 = critical miss
 
 ---
@@ -123,13 +139,15 @@ For creating new quests, read `${CLAUDE_SKILL_DIR}/quest-design.md`.
 
 ## Encounter Design
 
-Before placing enemies, read `${CLAUDE_SKILL_DIR}/encounter-guidelines.md` and the character sheet.
+Before placing enemies, read `${CLAUDE_SKILL_DIR}/encounter-guidelines.md` and the character sheet. Then run `validate-encounter` (see Scripts section above).
 
 Key rules:
 - Solo play: **2 enemies max** without player opt-in
 - No multiattack at levels 1-3 unless intentionally Deadly
 - Quest/bounty encounters: **Hard** difficulty, not Deadly
 - Never silently exceed Deadly — warn the player first
+
+After creating a campaign or adding locations with encounters, run `${CLAUDE_SKILL_DIR}/audit-encounters` to verify all encounters across all location files pass validation.
 
 For combat flow, see `${CLAUDE_SKILL_DIR}/combat.md`.
 
