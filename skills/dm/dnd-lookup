@@ -1,0 +1,518 @@
+#!/usr/bin/env python3
+"""Look up D&D 5e SRD data from the official API.
+
+Usage:
+  ./dnd-lookup monster goblin              # full stat block
+  ./dnd-lookup monster --cr 1/4            # list monsters at CR
+  ./dnd-lookup monster --search wolf       # search by name
+  ./dnd-lookup spell fireball              # spell details
+  ./dnd-lookup spell --level 3             # list spells by level
+  ./dnd-lookup spell --search fire         # search by name
+  ./dnd-lookup equipment longbow           # equipment stats
+  ./dnd-lookup equipment --search potion   # search by name
+  ./dnd-lookup condition frightened        # condition description
+  ./dnd-lookup magic-item bag-of-holding   # magic item details
+
+Resources: monster, spell, equipment, magic-item, condition
+Names use hyphens: "dire-wolf", "cure-wounds", "chain-mail".
+"""
+
+import json
+import sys
+import urllib.request
+import urllib.error
+
+BASE = "https://www.dnd5eapi.co/api/2014"
+
+
+def api_get(path):
+    """Fetch JSON from the 5e API."""
+    url = f"{BASE}{path}"
+    try:
+        req = urllib.request.Request(url, headers={"Accept": "application/json"})
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            return json.loads(resp.read())
+    except urllib.error.HTTPError as e:
+        if e.code == 404:
+            return None
+        print(f"ERROR: API returned {e.code} for {url}")
+        sys.exit(1)
+    except urllib.error.URLError as e:
+        print(f"ERROR: Could not reach API — {e.reason}")
+        sys.exit(1)
+
+
+# -- Formatters --
+
+def format_cr(cr):
+    if cr == 0.125: return "1/8"
+    if cr == 0.25: return "1/4"
+    if cr == 0.5: return "1/2"
+    if cr == int(cr): return str(int(cr))
+    return str(cr)
+
+
+def format_monster(m):
+    lines = []
+    lines.append(f"**{m['name']}** — {m['size']} {m['type']}, {m.get('alignment', 'unaligned')}")
+    lines.append(f"CR {format_cr(m['challenge_rating'])} ({m.get('xp', '?')} XP)")
+    lines.append("")
+
+    # AC
+    ac_entries = m.get("armor_class", [])
+    ac_parts = []
+    for ac in ac_entries:
+        val = ac.get("value", "?")
+        ac_type = ac.get("type", "")
+        ac_parts.append(f"{val}" + (f" ({ac_type})" if ac_type and ac_type != "dex" else ""))
+    lines.append(f"AC: {', '.join(ac_parts) if ac_parts else '?'}")
+
+    lines.append(f"HP: {m.get('hit_points', '?')} ({m.get('hit_dice', '?')})")
+
+    # Speed
+    speed = m.get("speed", {})
+    speed_parts = [f"{k} {v}" for k, v in speed.items()]
+    lines.append(f"Speed: {', '.join(speed_parts)}")
+    lines.append("")
+
+    # Abilities
+    abilities = ["strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma"]
+    labels = ["STR", "DEX", "CON", "INT", "WIS", "CHA"]
+    vals = [str(m.get(a, "?")) for a in abilities]
+    mods = []
+    for a in abilities:
+        v = m.get(a, 10)
+        mod = (v - 10) // 2
+        mods.append(f"{mod:+d}")
+    lines.append("  ".join(f"{l} {v}({m})" for l, v, m in zip(labels, vals, mods)))
+    lines.append("")
+
+    # Proficiencies
+    profs = m.get("proficiencies", [])
+    if profs:
+        prof_parts = []
+        for p in profs:
+            name = p.get("proficiency", {}).get("name", "?")
+            # Shorten "Saving Throw: DEX" and "Skill: Perception"
+            name = name.replace("Saving Throw: ", "Save ").replace("Skill: ", "")
+            prof_parts.append(f"{name} {p.get('value', '?'):+d}")
+        lines.append(f"Proficiencies: {', '.join(prof_parts)}")
+
+    # Senses
+    senses = m.get("senses", {})
+    if senses:
+        sense_parts = [f"{k.replace('_', ' ')} {v}" for k, v in senses.items() if v]
+        if sense_parts:
+            lines.append(f"Senses: {', '.join(sense_parts)}")
+
+    # Languages
+    langs = m.get("languages", "")
+    if langs:
+        lines.append(f"Languages: {langs}")
+
+    # Damage immunities/resistances/vulnerabilities
+    for key, label in [("damage_immunities", "Immune"), ("damage_resistances", "Resist"),
+                       ("damage_vulnerabilities", "Vulnerable"), ("condition_immunities", "Condition Immune")]:
+        vals = m.get(key, [])
+        if vals:
+            if key == "condition_immunities":
+                names = [c.get("name", "?") for c in vals]
+            else:
+                names = vals
+            lines.append(f"{label}: {', '.join(names)}")
+
+    lines.append("")
+
+    # Special abilities
+    for ability in m.get("special_abilities", []):
+        lines.append(f"* {ability['name']}: {ability.get('desc', '')}")
+
+    # Actions
+    actions = m.get("actions", [])
+    if actions:
+        lines.append("")
+        lines.append("Actions:")
+        for a in actions:
+            lines.append(f"  {a['name']}: {a.get('desc', '')}")
+
+    # Reactions
+    reactions = m.get("reactions", [])
+    if reactions:
+        lines.append("")
+        lines.append("Reactions:")
+        for r in reactions:
+            lines.append(f"  {r['name']}: {r.get('desc', '')}")
+
+    # Legendary actions
+    legendary = m.get("legendary_actions", [])
+    if legendary:
+        lines.append("")
+        lines.append("Legendary Actions:")
+        for la in legendary:
+            lines.append(f"  {la['name']}: {la.get('desc', '')}")
+
+    return "\n".join(lines)
+
+
+def format_monster_combat(m):
+    """Condensed stat block for mid-combat reference."""
+    lines = []
+    lines.append(f"**{m['name']}** — CR {format_cr(m['challenge_rating'])}")
+
+    ac_entries = m.get("armor_class", [])
+    ac_val = ac_entries[0].get("value", "?") if ac_entries else "?"
+    lines.append(f"HP: {m.get('hit_points', '?')} | AC: {ac_val}")
+
+    speed = m.get("speed", {})
+    speed_parts = [f"{k} {v}" for k, v in speed.items()]
+    lines.append(f"Speed: {', '.join(speed_parts)}")
+
+    for a in m.get("actions", []):
+        lines.append(f"  {a['name']}: {a.get('desc', '')}")
+
+    return "\n".join(lines)
+
+
+def format_spell(s):
+    lines = []
+    lines.append(f"**{s['name']}**")
+    lines.append(f"Level {s.get('level', '?')} {s.get('school', {}).get('name', '')} | "
+                 f"{'Ritual' if s.get('ritual') else 'Not ritual'} | "
+                 f"{'Concentration' if s.get('concentration') else 'No concentration'}")
+    lines.append(f"Casting Time: {s.get('casting_time', '?')}")
+    lines.append(f"Range: {s.get('range', '?')}")
+    lines.append(f"Duration: {s.get('duration', '?')}")
+
+    components = s.get("components", [])
+    comp_str = ", ".join(components)
+    material = s.get("material", "")
+    if material:
+        comp_str += f" ({material})"
+    lines.append(f"Components: {comp_str}")
+
+    lines.append("")
+    for desc in s.get("desc", []):
+        lines.append(desc)
+
+    higher = s.get("higher_level", [])
+    if higher:
+        lines.append("")
+        lines.append("At Higher Levels:")
+        for h in higher:
+            lines.append(f"  {h}")
+
+    # Damage info
+    damage = s.get("damage", {})
+    if damage:
+        dmg_type = damage.get("damage_type", {}).get("name", "")
+        scaling = damage.get("damage_at_slot_level") or damage.get("damage_at_character_level")
+        if scaling:
+            lines.append("")
+            lines.append(f"Damage ({dmg_type}):")
+            for lvl, dice in sorted(scaling.items(), key=lambda x: int(x[0])):
+                lines.append(f"  Level {lvl}: {dice}")
+
+    # DC
+    dc = s.get("dc", {})
+    if dc:
+        dc_type = dc.get("dc_type", {}).get("name", "?")
+        lines.append(f"Save: {dc_type}")
+
+    # Classes
+    classes = [c.get("name", "") for c in s.get("classes", [])]
+    if classes:
+        lines.append(f"Classes: {', '.join(classes)}")
+
+    return "\n".join(lines)
+
+
+def format_equipment(e):
+    lines = []
+    lines.append(f"**{e['name']}**")
+
+    cat = e.get("equipment_category", {}).get("name", "")
+    if cat:
+        lines.append(f"Category: {cat}")
+
+    cost = e.get("cost", {})
+    if cost:
+        lines.append(f"Cost: {cost.get('quantity', '?')} {cost.get('unit', '')}")
+
+    weight = e.get("weight")
+    if weight:
+        lines.append(f"Weight: {weight} lb")
+
+    # Weapon stats
+    damage = e.get("damage", {})
+    if damage:
+        lines.append(f"Damage: {damage.get('damage_dice', '?')} {damage.get('damage_type', {}).get('name', '')}")
+
+    two_hand = e.get("two_handed_damage", {})
+    if two_hand:
+        lines.append(f"Two-Handed: {two_hand.get('damage_dice', '?')} {two_hand.get('damage_type', {}).get('name', '')}")
+
+    wpn_range = e.get("range", {})
+    if wpn_range:
+        normal = wpn_range.get("normal")
+        long = wpn_range.get("long")
+        if normal:
+            range_str = f"{normal} ft"
+            if long:
+                range_str += f" / {long} ft"
+            lines.append(f"Range: {range_str}")
+
+    # Armor stats
+    ac = e.get("armor_class", {})
+    if ac:
+        lines.append(f"AC: {ac.get('base', '?')}" +
+                     (" + DEX" if ac.get("dex_bonus") else "") +
+                     (f" (max {ac.get('max_bonus')})" if ac.get("max_bonus") else ""))
+
+    str_req = e.get("str_minimum")
+    if str_req:
+        lines.append(f"STR Required: {str_req}")
+
+    stealth = e.get("stealth_disadvantage")
+    if stealth:
+        lines.append("Stealth: Disadvantage")
+
+    # Properties
+    props = e.get("properties", [])
+    if props:
+        lines.append(f"Properties: {', '.join(p.get('name', '') for p in props)}")
+
+    # Description
+    desc = e.get("desc", [])
+    if desc:
+        lines.append("")
+        for d in desc:
+            lines.append(d)
+
+    return "\n".join(lines)
+
+
+def format_condition(c):
+    lines = [f"**{c['name']}**", ""]
+    for d in c.get("desc", []):
+        lines.append(d)
+    return "\n".join(lines)
+
+
+def format_magic_item(m):
+    lines = [f"**{m['name']}**"]
+
+    cat = m.get("equipment_category", {}).get("name", "")
+    if cat:
+        lines.append(f"Category: {cat}")
+
+    rarity = m.get("rarity", {}).get("name", "")
+    if rarity:
+        lines.append(f"Rarity: {rarity}")
+
+    variants = m.get("variants", [])
+    if variants:
+        lines.append(f"Variants: {', '.join(v.get('name', '') for v in variants)}")
+
+    lines.append("")
+    for d in m.get("desc", []):
+        lines.append(d)
+
+    return "\n".join(lines)
+
+
+def list_results(data, label):
+    results = data.get("results", [])
+    if not results:
+        print(f"No {label} found.")
+        return
+    print(f"Found {data.get('count', len(results))} {label}:")
+    for r in results:
+        print(f"  {r['index']}: {r['name']}")
+
+
+# -- Commands --
+
+def cmd_monster(args):
+    if not args:
+        print("Usage: dnd-lookup monster <name> | --cr <CR> | --search <term>")
+        print("  Add --combat for condensed mid-combat stat block")
+        sys.exit(1)
+
+    combat = "--combat" in args
+    if combat:
+        args = [a for a in args if a != "--combat"]
+
+    if args[0] == "--cr":
+        if len(args) < 2:
+            print("ERROR: --cr requires a value (e.g., --cr 1/4)")
+            sys.exit(1)
+        cr_str = args[1]
+        # Convert fraction to float for API query param
+        if "/" in cr_str:
+            num, den = cr_str.split("/")
+            cr_val = int(num) / int(den)
+        else:
+            cr_val = float(cr_str)
+        data = api_get(f"/monsters?challenge_rating={cr_val}")
+        if data:
+            list_results(data, f"CR {cr_str} monsters")
+        return
+
+    if args[0] == "--search":
+        term = " ".join(args[1:]) if len(args) > 1 else ""
+        data = api_get(f"/monsters?name={term}")
+        if data:
+            list_results(data, "monsters")
+        return
+
+    # Direct lookup
+    name = args[0].lower()
+    data = api_get(f"/monsters/{name}")
+    if data is None:
+        # Try search as fallback
+        search = api_get(f"/monsters?name={name.replace('-', ' ')}")
+        if search and search.get("count", 0) > 0:
+            print(f"Monster '{name}' not found. Did you mean:")
+            for r in search["results"][:10]:
+                print(f"  {r['index']}")
+        else:
+            print(f"Monster '{name}' not found.")
+        sys.exit(1)
+
+    if combat:
+        print(format_monster_combat(data))
+    else:
+        print(format_monster(data))
+
+
+def cmd_spell(args):
+    if not args:
+        print("Usage: dnd-lookup spell <name> | --level <N> | --search <term>")
+        sys.exit(1)
+
+    if args[0] == "--level":
+        if len(args) < 2:
+            print("ERROR: --level requires a value")
+            sys.exit(1)
+        data = api_get(f"/spells?level={args[1]}")
+        if data:
+            list_results(data, f"level {args[1]} spells")
+        return
+
+    if args[0] == "--search":
+        term = " ".join(args[1:]) if len(args) > 1 else ""
+        data = api_get(f"/spells?name={term}")
+        if data:
+            list_results(data, "spells")
+        return
+
+    name = args[0].lower()
+    data = api_get(f"/spells/{name}")
+    if data is None:
+        search = api_get(f"/spells?name={name.replace('-', ' ')}")
+        if search and search.get("count", 0) > 0:
+            print(f"Spell '{name}' not found. Did you mean:")
+            for r in search["results"][:10]:
+                print(f"  {r['index']}")
+        else:
+            print(f"Spell '{name}' not found.")
+        sys.exit(1)
+
+    print(format_spell(data))
+
+
+def cmd_equipment(args):
+    if not args:
+        print("Usage: dnd-lookup equipment <name> | --search <term>")
+        sys.exit(1)
+
+    if args[0] == "--search":
+        term = " ".join(args[1:]) if len(args) > 1 else ""
+        data = api_get(f"/equipment?name={term}")
+        if data:
+            list_results(data, "equipment")
+        return
+
+    name = args[0].lower()
+    data = api_get(f"/equipment/{name}")
+    if data is None:
+        search = api_get(f"/equipment?name={name.replace('-', ' ')}")
+        if search and search.get("count", 0) > 0:
+            print(f"Equipment '{name}' not found. Did you mean:")
+            for r in search["results"][:10]:
+                print(f"  {r['index']}")
+        else:
+            print(f"Equipment '{name}' not found.")
+        sys.exit(1)
+
+    print(format_equipment(data))
+
+
+def cmd_condition(args):
+    if not args:
+        print("Usage: dnd-lookup condition <name>")
+        sys.exit(1)
+
+    name = args[0].lower()
+    data = api_get(f"/conditions/{name}")
+    if data is None:
+        print(f"Condition '{name}' not found.")
+        sys.exit(1)
+
+    print(format_condition(data))
+
+
+def cmd_magic_item(args):
+    if not args:
+        print("Usage: dnd-lookup magic-item <name> | --search <term>")
+        sys.exit(1)
+
+    if args[0] == "--search":
+        term = " ".join(args[1:]) if len(args) > 1 else ""
+        data = api_get(f"/magic-items?name={term}")
+        if data:
+            list_results(data, "magic items")
+        return
+
+    name = args[0].lower()
+    data = api_get(f"/magic-items/{name}")
+    if data is None:
+        search = api_get(f"/magic-items?name={name.replace('-', ' ')}")
+        if search and search.get("count", 0) > 0:
+            print(f"Magic item '{name}' not found. Did you mean:")
+            for r in search["results"][:10]:
+                print(f"  {r['index']}")
+        else:
+            print(f"Magic item '{name}' not found.")
+        sys.exit(1)
+
+    print(format_magic_item(data))
+
+
+COMMANDS = {
+    "monster": cmd_monster,
+    "spell": cmd_spell,
+    "equipment": cmd_equipment,
+    "condition": cmd_condition,
+    "magic-item": cmd_magic_item,
+}
+
+
+def main():
+    args = sys.argv[1:]
+
+    if not args or "--help" in args or "-h" in args:
+        print(__doc__)
+        sys.exit(0)
+
+    cmd = args[0].lower()
+    if cmd not in COMMANDS:
+        print(f"Unknown resource: {cmd}")
+        print(f"Available: {', '.join(COMMANDS.keys())}")
+        sys.exit(1)
+
+    COMMANDS[cmd](args[1:])
+
+
+if __name__ == "__main__":
+    main()
