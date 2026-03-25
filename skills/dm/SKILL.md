@@ -58,6 +58,22 @@ ${CLAUDE_SKILL_DIR}/audit-encounters --game-dir <path/to/game>
 ${CLAUDE_SKILL_DIR}/calc-xp --level <PC level> --current-xp <current XP> <CR> <CR> ...
 ```
 
+**SRD lookup:** `${CLAUDE_SKILL_DIR}/dnd-lookup` — Look up official 5e stats from the SRD. Use this instead of guessing monster stats, spell details, or equipment properties.
+```
+${CLAUDE_SKILL_DIR}/dnd-lookup monster goblin           # full stat block
+${CLAUDE_SKILL_DIR}/dnd-lookup monster goblin --combat   # condensed for mid-combat
+${CLAUDE_SKILL_DIR}/dnd-lookup monster --cr 1/4          # list monsters at a CR
+${CLAUDE_SKILL_DIR}/dnd-lookup spell fireball            # spell details + damage scaling
+${CLAUDE_SKILL_DIR}/dnd-lookup equipment longbow         # weapon/armor stats
+${CLAUDE_SKILL_DIR}/dnd-lookup condition frightened       # condition rules
+${CLAUDE_SKILL_DIR}/dnd-lookup magic-item bag-of-holding  # magic item description
+```
+Use `--search <term>` on any resource to fuzzy-search by name. Names use hyphens: `dire-wolf`, `cure-wounds`.
+
+- **Before combat:** look up enemy stat blocks and use real HP/AC/attacks — don't improvise stats for SRD creatures
+- **During combat:** use `--combat` for condensed reference
+- **For spells:** look up range, components, damage, and save DC instead of recalling from memory
+
 - Batch multiple dice rolls in one call to reduce wait time (e.g., attack + damage, all initiative rolls)
 - Nat 20 on attacks = critical hit, nat 1 = critical miss
 
