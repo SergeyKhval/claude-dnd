@@ -29,6 +29,16 @@ _None yet._
 | Conditions | None |
 | Gold | — |
 
+## Campaign Arc
+
+> Canonical source: [quests.md](../campaign/quests.md) — Main Quest section
+
+**_<Main Quest Title>_** — Milestone _N_/_Total_: _<Active Milestone Name>_
+
+| # | Milestone | Status |
+|---|-----------|--------|
+| 1 | _Name_ | Active / Completed / Locked |
+
 ## Quest Secrets Summary
 
 > Canonical source: [quests.md](../campaign/quests.md)

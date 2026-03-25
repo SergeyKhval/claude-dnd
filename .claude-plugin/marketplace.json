@@ -9,7 +9,7 @@
     {
       "name": "claude-dnd",
       "description": "D&D 5e game engine — solo tabletop RPG campaigns with persistent file-based game state, transparent dice rolling, and full 5e rules",
-      "version": "0.3.0",
+      "version": "0.5.0",
       "source": {
         "source": "url",
         "url": "https://github.com/SergeyKhval/claude-dnd.git"

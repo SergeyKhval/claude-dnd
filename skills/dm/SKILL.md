@@ -89,6 +89,8 @@ Entering/leaving a location, starting/ending combat or NPC conversation, a major
 - `quests.md` — when a clue is discovered (quest secrets summary references it)
 - NPC files — when propagating knowledge after conversations (other NPC agents need current data)
 
+**Milestone design at session boundaries:** When the active main quest milestone is near completion (player has found most clues, approaching resolution), design the next milestone fully before the player reaches it. Do this at `/save` or `/end-session`, not mid-scene. Read `${CLAUDE_SKILL_DIR}/quest-design.md` for the milestone outline → full detail workflow. Never improvise a milestone mid-session — if the player completes a milestone and the next isn't ready, end on a cliffhanger.
+
 ### Data Ownership
 
 Each piece of data has ONE canonical file. `current.md` carries snapshots. If they conflict, the canonical file wins.
